@@ -26,17 +26,18 @@ import {
 } from './helpers'
 
 function isCompleteMint(mintId: string): boolean {
-  return MintEvent.load(mintId).sender !== null // sufficient checks
+  let mintEvent = MintEvent.load(mintId)!
+  return mintEvent.sender !== null // sufficient checks
 }
 
 export function handleTransfer(event: Transfer): void {
   // ignore initial transfers for first adds
-  if (event.params.to.toHexString() == ADDRESS_ZERO && event.params.value.equals(BigInt.fromI32(1000))) {
+  if (event.params.to.toHexString()! == ADDRESS_ZERO && event.params.value.equals(BigInt.fromI32(1000))) {
     return
   }
 
-  let factory = UniswapFactory.load(FACTORY_ADDRESS)
-  let transactionHash = event.transaction.hash.toHexString()
+  let factory = UniswapFactory.load(FACTORY_ADDRESS)!
+  let transactionHash = event.transaction.hash.toHexString()!
 
   // user stats
   let from = event.params.from
@@ -45,7 +46,7 @@ export function handleTransfer(event: Transfer): void {
   createUser(to)
 
   // get pair and load contract
-  let pair = Pair.load(event.address.toHexString())
+  let pair = Pair.load(event.address.toHexString()!)!
   let pairContract = PairContract.bind(event.address)
 
   // liquidity token amount being transfered
@@ -64,7 +65,7 @@ export function handleTransfer(event: Transfer): void {
 
   // mints
   let mints = transaction.mints
-  if (from.toHexString() == ADDRESS_ZERO) {
+  if (from.toHexString()! == ADDRESS_ZERO) {
     // update total supply
     pair.totalSupply = pair.totalSupply.plus(value)
     pair.save()
@@ -73,7 +74,7 @@ export function handleTransfer(event: Transfer): void {
     if (mints.length === 0 || isCompleteMint(mints[mints.length - 1])) {
       let mint = new MintEvent(
         event.transaction.hash
-          .toHexString()
+          .toHexString()!
           .concat('-')
           .concat(BigInt.fromI32(mints.length).toString())
       )
@@ -95,11 +96,11 @@ export function handleTransfer(event: Transfer): void {
   }
 
   // case where direct send first on ETH withdrawls
-  if (event.params.to.toHexString() == pair.id) {
+  if (event.params.to.toHexString()! == pair.id) {
     let burns = transaction.burns
     let burn = new BurnEvent(
       event.transaction.hash
-        .toHexString()
+        .toHexString()!
         .concat('-')
         .concat(BigInt.fromI32(burns.length).toString())
     )
@@ -121,7 +122,7 @@ export function handleTransfer(event: Transfer): void {
   }
 
   // burn
-  if (event.params.to.toHexString() == ADDRESS_ZERO && event.params.from.toHexString() == pair.id) {
+  if (event.params.to.toHexString()! == ADDRESS_ZERO && event.params.from.toHexString()! == pair.id) {
     pair.totalSupply = pair.totalSupply.minus(value)
     pair.save()
 
@@ -129,27 +130,27 @@ export function handleTransfer(event: Transfer): void {
     let burns = transaction.burns
     let burn: BurnEvent
     if (burns.length > 0) {
-      let currentBurn = BurnEvent.load(burns[burns.length - 1])
+      let currentBurn = BurnEvent.load(burns[burns.length - 1])!
       if (currentBurn.needsComplete) {
-        burn = currentBurn as BurnEvent
+      burn = currentBurn as BurnEvent
       } else {
-        burn = new BurnEvent(
-          event.transaction.hash
-            .toHexString()
-            .concat('-')
-            .concat(BigInt.fromI32(burns.length).toString())
-        )
-        burn.transaction = transaction.id
-        burn.needsComplete = false
-        burn.pair = pair.id
-        burn.liquidity = value
-        burn.transaction = transaction.id
-        burn.timestamp = transaction.timestamp
+      burn = new BurnEvent(
+        event.transaction.hash
+        .toHexString()!
+        .concat('-')
+        .concat(BigInt.fromI32(burns.length).toString())
+      )
+      burn.transaction = transaction.id
+      burn.needsComplete = false
+      burn.pair = pair.id
+      burn.liquidity = value
+      burn.transaction = transaction.id
+      burn.timestamp = transaction.timestamp
       }
     } else {
       burn = new BurnEvent(
         event.transaction.hash
-          .toHexString()
+          .toHexString()!
           .concat('-')
           .concat(BigInt.fromI32(burns.length).toString())
       )
@@ -163,7 +164,7 @@ export function handleTransfer(event: Transfer): void {
 
     // if this logical burn included a fee mint, account for this
     if (mints.length !== 0 && !isCompleteMint(mints[mints.length - 1])) {
-      let mint = MintEvent.load(mints[mints.length - 1])
+      let mint = MintEvent.load(mints[mints.length - 1])!
       burn.feeTo = mint.to
       burn.feeLiquidity = mint.liquidity
       // remove the logical mint
@@ -193,14 +194,14 @@ export function handleTransfer(event: Transfer): void {
     transaction.save()
   }
 
-  if (from.toHexString() != ADDRESS_ZERO && from.toHexString() != pair.id) {
+  if (from.toHexString()! != ADDRESS_ZERO && from.toHexString()! != pair.id) {
     let fromUserLiquidityPosition = createLiquidityPosition(event.address, from)
     fromUserLiquidityPosition.liquidityTokenBalance = convertTokenToDecimal(pairContract.balanceOf(from), BI_18)
     fromUserLiquidityPosition.save()
     createLiquiditySnapshot(fromUserLiquidityPosition, event)
   }
 
-  if (event.params.to.toHexString() != ADDRESS_ZERO && to.toHexString() != pair.id) {
+  if (event.params.to.toHexString()! != ADDRESS_ZERO && to.toHexString()! != pair.id) {
     let toUserLiquidityPosition = createLiquidityPosition(event.address, to)
     toUserLiquidityPosition.liquidityTokenBalance = convertTokenToDecimal(pairContract.balanceOf(to), BI_18)
     toUserLiquidityPosition.save()
@@ -211,10 +212,10 @@ export function handleTransfer(event: Transfer): void {
 }
 
 export function handleSync(event: Sync): void {
-  let pair = Pair.load(event.address.toHex())
-  let token0 = Token.load(pair.token0)
-  let token1 = Token.load(pair.token1)
-  let uniswap = UniswapFactory.load(FACTORY_ADDRESS)
+  let pair = Pair.load(event.address.toHex())!
+  let token0 = Token.load(pair.token0)!
+  let token1 = Token.load(pair.token1)!
+  let uniswap = UniswapFactory.load(FACTORY_ADDRESS)!
 
   // reset factory liquidity by subtracting onluy tarcked liquidity
   uniswap.totalLiquidityETH = uniswap.totalLiquidityETH.minus(pair.trackedReserveETH as BigDecimal)
@@ -234,7 +235,7 @@ export function handleSync(event: Sync): void {
   pair.save()
 
   // update ETH price now that reserves could have changed
-  let bundle = Bundle.load('1')
+  let bundle = Bundle.load('1')!
   bundle.ethPrice = getEthPriceInUSD()
   bundle.save()
 
@@ -276,15 +277,15 @@ export function handleSync(event: Sync): void {
 }
 
 export function handleMint(event: Mint): void {
-  let transaction = Transaction.load(event.transaction.hash.toHexString())
+  let transaction = Transaction.load(event.transaction.hash.toHexString()!)!
   let mints = transaction.mints
-  let mint = MintEvent.load(mints[mints.length - 1])
+  let mint = MintEvent.load(mints[mints.length - 1])!
 
-  let pair = Pair.load(event.address.toHex())
-  let uniswap = UniswapFactory.load(FACTORY_ADDRESS)
+  let pair = Pair.load(event.address.toHex())!
+  let uniswap = UniswapFactory.load(FACTORY_ADDRESS)!
 
-  let token0 = Token.load(pair.token0)
-  let token1 = Token.load(pair.token1)
+  let token0 = Token.load(pair.token0)!
+  let token1 = Token.load(pair.token1)!
 
   // update exchange info (except balances, sync will cover that)
   let token0Amount = convertTokenToDecimal(event.params.amount0, token0.decimals)
@@ -295,10 +296,10 @@ export function handleMint(event: Mint): void {
   token1.txCount = token1.txCount.plus(ONE_BI)
 
   // get new amounts of USD and ETH for tracking
-  let bundle = Bundle.load('1')
-  let amountTotalUSD = token1.derivedETH
+  let bundle = Bundle.load('1')!
+  let amountTotalUSD = token1.derivedETH!
     .times(token1Amount)
-    .plus(token0.derivedETH.times(token0Amount))
+    .plus(token0.derivedETH!.times(token0Amount))
     .times(bundle.ethPrice)
 
   // update txn counts
@@ -331,7 +332,7 @@ export function handleMint(event: Mint): void {
 }
 
 export function handleBurn(event: Burn): void {
-  let transaction = Transaction.load(event.transaction.hash.toHexString())
+  let transaction = Transaction.load(event.transaction.hash.toHexString()!)!
 
   // safety check
   if (transaction === null) {
@@ -339,14 +340,14 @@ export function handleBurn(event: Burn): void {
   }
 
   let burns = transaction.burns
-  let burn = BurnEvent.load(burns[burns.length - 1])
+  let burn = BurnEvent.load(burns[burns.length - 1])!
 
-  let pair = Pair.load(event.address.toHex())
-  let uniswap = UniswapFactory.load(FACTORY_ADDRESS)
+  let pair = Pair.load(event.address.toHex())!
+  let uniswap = UniswapFactory.load(FACTORY_ADDRESS)!
 
   //update token info
-  let token0 = Token.load(pair.token0)
-  let token1 = Token.load(pair.token1)
+  let token0 = Token.load(pair.token0)!
+  let token1 = Token.load(pair.token1)!
   let token0Amount = convertTokenToDecimal(event.params.amount0, token0.decimals)
   let token1Amount = convertTokenToDecimal(event.params.amount1, token1.decimals)
 
@@ -355,10 +356,10 @@ export function handleBurn(event: Burn): void {
   token1.txCount = token1.txCount.plus(ONE_BI)
 
   // get new amounts of USD and ETH for tracking
-  let bundle = Bundle.load('1')
-  let amountTotalUSD = token1.derivedETH
+  let bundle = Bundle.load('1')!
+  let amountTotalUSD = token1.derivedETH!
     .times(token1Amount)
-    .plus(token0.derivedETH.times(token0Amount))
+    .plus(token0.derivedETH!.times(token0Amount))
     .times(bundle.ethPrice)
 
   // update txn counts
@@ -393,9 +394,9 @@ export function handleBurn(event: Burn): void {
 }
 
 export function handleSwap(event: Swap): void {
-  let pair = Pair.load(event.address.toHexString())
-  let token0 = Token.load(pair.token0)
-  let token1 = Token.load(pair.token1)
+  let pair = Pair.load(event.address.toHexString()!)!
+  let token0 = Token.load(pair.token0)!
+  let token1 = Token.load(pair.token1)!
   let amount0In = convertTokenToDecimal(event.params.amount0In, token0.decimals)
   let amount1In = convertTokenToDecimal(event.params.amount1In, token1.decimals)
   let amount0Out = convertTokenToDecimal(event.params.amount0Out, token0.decimals)
@@ -406,12 +407,12 @@ export function handleSwap(event: Swap): void {
   let amount1Total = amount1Out.plus(amount1In)
 
   // ETH/USD prices
-  let bundle = Bundle.load('1')
+  let bundle = Bundle.load('1')!
 
   // get total amounts of derived USD and ETH for tracking
-  let derivedAmountETH = token1.derivedETH
+  let derivedAmountETH = token1.derivedETH!
     .times(amount1Total)
-    .plus(token0.derivedETH.times(amount0Total))
+    .plus(token0.derivedETH!.times(amount0Total))
     .div(BigDecimal.fromString('2'))
   let derivedAmountUSD = derivedAmountETH.times(bundle.ethPrice)
 
@@ -448,7 +449,7 @@ export function handleSwap(event: Swap): void {
   pair.save()
 
   // update global values, only used tracked amounts for volume
-  let uniswap = UniswapFactory.load(FACTORY_ADDRESS)
+  let uniswap = UniswapFactory.load(FACTORY_ADDRESS)!
   uniswap.totalVolumeUSD = uniswap.totalVolumeUSD.plus(trackedAmountUSD)
   uniswap.totalVolumeETH = uniswap.totalVolumeETH.plus(trackedAmountETH)
   uniswap.untrackedVolumeUSD = uniswap.untrackedVolumeUSD.plus(derivedAmountUSD)
@@ -460,9 +461,9 @@ export function handleSwap(event: Swap): void {
   token1.save()
   uniswap.save()
 
-  let transaction = Transaction.load(event.transaction.hash.toHexString())
+  let transaction = Transaction.load(event.transaction.hash.toHexString()!)!
   if (transaction === null) {
-    transaction = new Transaction(event.transaction.hash.toHexString())
+    transaction = new Transaction(event.transaction.hash.toHexString()!)
     transaction.blockNumber = event.block.number
     transaction.timestamp = event.block.timestamp
     transaction.mints = []
@@ -472,7 +473,7 @@ export function handleSwap(event: Swap): void {
   let swaps = transaction.swaps
   let swap = new SwapEvent(
     event.transaction.hash
-      .toHexString()
+      .toHexString()!
       .concat('-')
       .concat(BigInt.fromI32(swaps.length).toString())
   )
